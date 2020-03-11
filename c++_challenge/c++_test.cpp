@@ -117,4 +117,5 @@ int main(int argc, char *argv[])
 
   print_array(arr, no_of_rows, no_of_cols);
 
+  return 0;
 }
