@@ -1,103 +1,90 @@
-
 #Importing Libraries
 import curses
 import numpy as np
 import json
 ####################
 
+#####################################################################
+#--------------------------GAME OF LIFE-----------------------------#
+#####################################################################
 
-def addGlider(i, j, grid):
+class GameOfLife():
 
-    glider = np.array([[0,  0, 1],
-                       [1,  0, 1],
-                       [0,  1, 1]])
-    grid[i:i+3, j:j+3] = glider
+  def __init__(self):
 
-def addGosperGliderGun(i, j, grid):
+    self.get_input()
+    self.init_pattern(self.load_pattern())
+    self.run_game()
 
-    gun = np.zeros(11*38).reshape(11, 38)
+  def load_pattern(self):
 
-    gun[5][1] = gun[5][2] = 1
-    gun[6][1] = gun[6][2] = 1
+    with open("config.json") as reader:
+      json_str = reader.read()
+    config = json.loads(json_str)
 
-    gun[3][13] = gun[3][14] = 1
-    gun[4][12] = gun[4][16] = 1
-    gun[5][11] = gun[5][17] = 1
-    gun[6][11] = gun[6][15] = gun[6][17] = gun[6][18] = 1
-    gun[7][11] = gun[7][17] = 1
-    gun[8][12] = gun[8][16] = 1
-    gun[9][13] = gun[9][14] = 1
+    return np.array(config[self.pattern.lower()], dtype=np.uint8)
 
-    gun[1][25] = 1
-    gun[2][23] = gun[2][25] = 1
-    gun[3][21] = gun[3][22] = 1
-    gun[4][21] = gun[4][22] = 1
-    gun[5][21] = gun[5][22] = 1
-    gun[6][23] = gun[6][25] = 1
-    gun[7][25] = 1
+  def get_input(self):
 
-    gun[3][35] = gun[3][36] = 1
-    gun[4][35] = gun[4][36] = 1
+    print("Enter Pattern: ")
+    self.pattern = input()
 
-    grid[i:i+11, j:j+38] = gun
+    print("Enter Number of Iterations: ")
+    self.iterations = int(input())
 
-def update(grid, rows, cols):
+    print("Enter Dimensions: ")
+    self.rows, self.cols = tuple(map(int, input().split(',')))
+    self.grid = np.zeros((self.rows, self.cols), dtype=np.uint8)
 
-    matrix = grid.copy()
+  def init_pattern(self, obj):
+    r, c = obj.shape
+    self.grid[5:5+r, 5:5+c] = obj
 
-    for i in range(rows):
-        for j in range(cols):
+  def update(self):
 
-            try:
+      matrix = self.grid.copy()
 
-                neighbors = grid[i+1, j-1] + grid[i+1, j] + grid[i+1, j+1] + grid[i, j-1] + grid[i, j+1] + grid[i-1, j-1] + grid[i-1, j] + grid[i-1, j+1]
+      for i in range(self.rows):
+          for j in range(self.cols):
+              try:
 
-                if (grid[i, j]  == 0) and (neighbors == 3): # Dead Cell
-                    matrix[i, j] = 1
-                elif (grid[i,j] == 1) and ((neighbors == 3) or (neighbors == 2)): #Living Cell
-                    matrix[i, j] = 1
-                else:
-                    matrix[i, j] = 0
+                  neighbors = self.grid[i+1, j-1] + self.grid[i+1, j] + self.grid[i+1, j+1] + self.grid[i, j-1] + self.grid[i, j+1] + self.grid[i-1, j-1] + self.grid[i-1, j] + self.grid[i-1, j+1]
 
-            except IndexError as e:
-                pass
+                  if (self.grid[i, j]  == 0) and (neighbors == 3): # Dead Cell
+                      matrix[i, j] = 1
+                  elif (self.grid[i,j] == 1) and ((neighbors == 3) or (neighbors == 2)): #Living Cell
+                      matrix[i, j] = 1
+                  else:
+                      matrix[i, j] = 0
 
-    return matrix
+              except IndexError as e:
+                  pass
 
-rows, cols = 50, 50
-grid = np.zeros((rows, cols), dtype=np.uint8)
+      self.grid = matrix.copy()
 
-CONFIG_PATH = "config.json"
-with open(CONFIG_PATH) as f:
-    json_str = f.read()
-config = json.loads(json_str)
+  def run_game(self):
+    
+    screen = curses.initscr()
+    win = curses.newwin(self.rows, self.cols, 0, 0)
+    curses.curs_set(0)
 
-print("Enter Pattern: ")
-pattern = input()
+    while self.iterations > 0:
 
-print("Enter Number of Iterations: ")
-iterations = int(input())
+        win.clear()
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if(self.grid[i,j] == 1):
+                    win.addch(i, j, curses.ACS_DIAMOND)
 
-obj = np.array(config[pattern.lower()], dtype=np.uint8)
-r, c = obj.shape
-grid[5:5+r, 5:5+c] = obj
+        self.update()
+        self.iterations -= 1
+        win.refresh()
 
-screen = curses.initscr()
-win = curses.newwin(rows, cols, 0, 0)
-curses.curs_set(0)
+    screen.refresh()
+    curses.endwin()
 
-while iterations > 0:
 
-    win.clear()
-    for i in range(rows):
-        for j in range(cols):
-            if(grid[i,j] == 1):
-                win.addch(i, j, curses.ACS_DIAMOND)
-
-    grid = update(grid, rows, cols)
-    iterations -= 1
-    win.refresh()
-
-screen.addstr(10, 30, 'Game Ended!')
-screen.refresh()
-curses.endwin()
+####################################################
+#----------------Driver Code-----------------------#
+gameOfLife = GameOfLife()
+####################################################
